@@ -47,7 +47,6 @@ const readAllCats = (req, res, callback) => {
   Cat.find(callback).lean();
 };
 
-
 // function to find a specific cat on request.
 // Express functions always receive the request and the response.
 const readCat = (req, res) => {
@@ -85,9 +84,7 @@ const readAllDogs = (req, res, callback) => {
   // The lean function will force find to return data in the js
   // object format, rather than the Mongo document format.
   Dog.find(callback).lean();
-
 };
-
 
 // function to handle requests to the page1 page
 // controller functions in Express receive the full HTTP request
@@ -124,12 +121,12 @@ const hostPage2 = (req, res) => {
 // controller functions in Express receive the full HTTP request
 // and a pre-filled out response object to send
 const hostPage3 = (req, res) => {
-    // res.render takes a name of a page to render.
-    // These must be in the folder you specified as views in your main app.js file
-    // Additionally, you don't need .jade because you registered the file type
-    // in the app.js as jade. Calling res.render('index')
-    // actually calls index.jade. A second parameter of JSON can be passed
-    // into the jade to be used as variables with #{varName}
+  // res.render takes a name of a page to render.
+  // These must be in the folder you specified as views in your main app.js file
+  // Additionally, you don't need .jade because you registered the file type
+  // in the app.js as jade. Calling res.render('index')
+  // actually calls index.jade. A second parameter of JSON can be passed
+  // into the jade to be used as variables with #{varName}
   res.render('page3');
 };
 
@@ -220,8 +217,6 @@ const setDog = (req, res) => {
     return res.status(400).json({ error: 'name,breed and age are all required' });
   }
 
-  
-
   // dummy JSON to insert into database
   const dogData = {
     name: req.body.name,
@@ -236,11 +231,8 @@ const setDog = (req, res) => {
   const savePromise = newDog.save();
 
   savePromise.then(() => {
-    // set the lastAdded cat to our newest cat object.
-    // This way we can update it dynamically
-    lastAddedDog = newDog;
     // return success
-    res.json({ name: lastAddedDog.name, breed: lastAddedDog.breed, age: lastAddedDog.age });
+    res.json({ name: dogData.name, breed: dogData.breed, age: dogData.age });
   });
 
   // if error, return it
@@ -250,7 +242,7 @@ const setDog = (req, res) => {
 };
 
 const increaseAge = (req, res) => {
-    // check if there is a query parameter for name
+  // check if there is a query parameter for name
   // BUT WAIT!!?!
   // Why is this req.query and not req.body like the others
   // This is a GET request. Those come as query parameters in the URL
@@ -279,25 +271,23 @@ const increaseAge = (req, res) => {
     if (!doc) {
       return res.json({ error: 'No dog found' });
     }
-
-    
-    doc.age++;
+    const toSave = doc;
+    toSave.age += 1;
 
     // once you change all the object properties you want,
     // then just call the Model object's save function
     // create a new save promise for the database
-    const savePromise = doc.save();
+    const savePromise = toSave.save();
 
     // send back the name as a success for now
-    savePromise.then(() => res.json({ name: doc.name, breed: doc.breed, age: doc.age }));
+    savePromise.then(() => res.json({ name: toSave.name, breed: toSave.breed, age: toSave.age }));
 
     // if save error, just return an error for now
-    savePromise.catch((err) => res.status(500).json({ err }));
+    savePromise.catch((error) => res.status(500).json({ error }));
+
+    return savePromise;
   });
-
-
-  
-}
+};
 
 // function to handle requests search for a name and return the object
 // controller functions in Express receive the full HTTP request
