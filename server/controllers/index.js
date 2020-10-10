@@ -3,6 +3,8 @@ const models = require('../models');
 
 // get the Cat model
 const Cat = models.Cat.CatModel;
+// get the Dog model
+const Dog = models.Dog.DogModel;
 
 // default fake data so that we have something to work with until we make a real Cat
 const defaultData = {
@@ -70,6 +72,23 @@ const readCat = (req, res) => {
   Cat.findByName(name1, callback);
 };
 
+// function to find all dogs on request.
+// Express functions always receive the request and the response.
+const readAllDogs = (req, res, callback) => {
+  // Call the model's built in find function and provide it a
+  // callback to run when the query is complete
+  // Find has several versions
+  // one parameter is just the callback
+  // two parameters is JSON of search criteria and callback.
+  // That limits your search to only things that match the criteria
+  // The find function returns an array of matching objects
+  // The lean function will force find to return data in the js
+  // object format, rather than the Mongo document format.
+  Dog.find(callback).lean();
+
+};
+
+
 // function to handle requests to the page1 page
 // controller functions in Express receive the full HTTP request
 // and a pre-filled out response object to send
@@ -112,6 +131,24 @@ const hostPage3 = (req, res) => {
     // actually calls index.jade. A second parameter of JSON can be passed
     // into the jade to be used as variables with #{varName}
   res.render('page3');
+};
+
+// function to handle requests to the page3 page
+// controller functions in Express receive the full HTTP request
+// and a pre-filled out response object to send
+const hostPage4 = (req, res) => {
+  // function to call when we get objects back from the database.
+  // With Mongoose's find functions, you will get an err and doc(s) back
+  const callback = (err, docs) => {
+    if (err) {
+      return res.status(500).json({ err }); // if error, return it
+    }
+
+    // return success
+    return res.render('page4', { dogs: docs });
+  };
+
+  readAllDogs(req, res, callback);
 };
 
 // function to handle get request to send the name
@@ -168,6 +205,99 @@ const setName = (req, res) => {
   return res;
 };
 
+// function to handle a request to set the name
+// controller functions in Express receive the full HTTP request
+// and get a pre-filled out response object to send
+// ADDITIONALLY, with body-parser we will get the
+// body/form/POST data in the request as req.body
+const setDog = (req, res) => {
+  // check if the required fields exist
+  // normally you would also perform validation
+  // to know if the data they sent you was real
+  if (!req.body.name || !req.body.breed || !req.body.age) {
+    // if not respond with a 400 error
+    // (either through json or a web page depending on the client dev)
+    return res.status(400).json({ error: 'name,breed and age are all required' });
+  }
+
+  
+
+  // dummy JSON to insert into database
+  const dogData = {
+    name: req.body.name,
+    breed: req.body.breed,
+    age: req.body.age,
+  };
+
+  // create a new object of CatModel with the object to save
+  const newDog = new Dog(dogData);
+
+  // create new save promise for the database
+  const savePromise = newDog.save();
+
+  savePromise.then(() => {
+    // set the lastAdded cat to our newest cat object.
+    // This way we can update it dynamically
+    lastAddedDog = newDog;
+    // return success
+    res.json({ name: lastAddedDog.name, breed: lastAddedDog.breed, age: lastAddedDog.age });
+  });
+
+  // if error, return it
+  savePromise.catch((err) => res.status(500).json({ err }));
+
+  return res;
+};
+
+const increaseAge = (req, res) => {
+    // check if there is a query parameter for name
+  // BUT WAIT!!?!
+  // Why is this req.query and not req.body like the others
+  // This is a GET request. Those come as query parameters in the URL
+  // For POST requests like the other ones in here, those come in a
+  // request body because they aren't a query
+  // POSTS send data to add while GETS query for a page or data (such as a search)
+  if (!req.query.name) {
+    return res.status(400).json({ error: 'Name is required' });
+  }
+
+  // Call our Cat's static findByName function.
+  // Since this is a static function, we can just call it without an object
+  // pass in a callback (like we specified in the Cat model
+  // Normally would you break this code up, but I'm trying to keep it
+  // together so it's easier to see how the system works
+  // For that reason, I gave it an anonymous callback instead of a
+  // named function you'd have to go find
+  return Dog.findByName(req.query.name, (err, doc) => {
+    // errs, handle them
+    if (err) {
+      return res.status(500).json({ err }); // if error, return it
+    }
+
+    // if no matches, let them know
+    // (does not necessarily have to be an error since technically it worked correctly)
+    if (!doc) {
+      return res.json({ error: 'No dog found' });
+    }
+
+    
+    doc.age++;
+
+    // once you change all the object properties you want,
+    // then just call the Model object's save function
+    // create a new save promise for the database
+    const savePromise = doc.save();
+
+    // send back the name as a success for now
+    savePromise.then(() => res.json({ name: doc.name, breed: doc.breed, age: doc.age }));
+
+    // if save error, just return an error for now
+    savePromise.catch((err) => res.status(500).json({ err }));
+  });
+
+
+  
+}
 
 // function to handle requests search for a name and return the object
 // controller functions in Express receive the full HTTP request
@@ -255,10 +385,13 @@ module.exports = {
   page1: hostPage1,
   page2: hostPage2,
   page3: hostPage3,
+  page4: hostPage4,
   readCat,
   getName,
   setName,
+  setDog,
   updateLast,
   searchName,
+  increaseAge,
   notFound,
 };
